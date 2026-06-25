@@ -1,0 +1,9 @@
+AI-Analytics-Copilot/
+│
+├── README.md
+├── requirements.txt
+├── .gitignore
+├── .env.example
+├── pyproject.toml
+├── LICENSE
+└── main.py
