@@ -28,7 +28,7 @@ def generate_statistics(df):
 
     statistics = {}
     for column in numeric_columns:
-        column_data = df[column]
+        series = df[column]
         statistics[column] = {
             "count": int(series.count()),
             "mean": float(series.mean()),
