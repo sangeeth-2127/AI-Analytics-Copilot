@@ -13,6 +13,7 @@ import pandas as pd
 
 from app.schemas.visualization import (
     AvailableColumnsResponse,
+    ChartMetadata,
     ChartResponse,
     ChartType,
 )
@@ -60,11 +61,17 @@ class VisualizationService:
         )
 
         return ChartResponse(
-            chart_type=chart_type,
-            x_column=x_column,
-            y_column=y_column,
-            figure=figure.to_json(),
-        )
+         chart_type=chart_type,
+         x_column=x_column,
+         y_column=y_column,
+         metadata=ChartMetadata(
+         title=figure.layout.title.text or "",
+         x_label=x_column,
+         y_label=y_column,
+         total_rows=len(df),
+         ),
+         figure=figure.to_json(),
+         )
 
 
 visualization_service = VisualizationService()

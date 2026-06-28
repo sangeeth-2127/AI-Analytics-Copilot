@@ -1,95 +1,132 @@
 """
 Chat Schemas
 
-Pydantic models for the AI Analytics Copilot.
+Defines request and response models for the
+AI Analytics Copilot chat API.
 
 Project: AI Analytics Copilot
 Author: Sangeeth S
 """
 
-from typing import Literal
+from __future__ import annotations
 
-from pydantic import BaseModel, Field
+from datetime import UTC, datetime
+from enum import Enum
 
-from app.schemas.visualization import ChartType
+from pydantic import (
+    BaseModel,
+    ConfigDict,
+    Field,
+)
 
+
+# =====================================================
+# Chat Role
+# =====================================================
+
+class ChatRole(str, Enum):
+    """
+    Chat message role.
+    """
+
+    SYSTEM = "system"
+
+    USER = "user"
+
+    ASSISTANT = "assistant"
+
+
+# =====================================================
+# Chat Message
+# =====================================================
+
+class ChatMessage(BaseModel):
+    """
+    Represents a single message
+    within a conversation.
+    """
+
+    role: ChatRole
+
+    content: str = Field(
+        ...,
+        min_length=1,
+        description="Message content.",
+    )
+
+    timestamp: datetime = Field(
+        default_factory=lambda: datetime.now(UTC),
+        description="Message creation time.",
+    )
+
+    model_config = ConfigDict(
+        extra="forbid",
+        frozen=True,
+    )
+
+
+# =====================================================
+# Chat Request
+# =====================================================
 
 class ChatRequest(BaseModel):
     """
-    User request to the AI Copilot.
+    Incoming chat request.
+
+    If conversation_id is omitted,
+    a new conversation will be created.
     """
+
+    dataset_id: str = Field(
+        ...,
+        min_length=1,
+        description="Dataset identifier.",
+    )
 
     question: str = Field(
         ...,
         min_length=1,
-        description="Natural language question about the uploaded dataset.",
-        examples=[
-            "Show the distribution of Age.",
-            "Compare Age and Overall.",
-            "Which feature has the highest variance?",
-            "Recommend a machine learning model.",
-        ],
+        description="User question.",
     )
 
-    model_config = {
-        "extra": "forbid",
-        "frozen": True,
-    }
-
-
-class CopilotAction(BaseModel):
-    """
-    Represents an action that the frontend
-    or backend should perform.
-    """
-
-    type: Literal[
-        "visualization",
-        "analysis",
-        "recommendation",
-        "report",
-    ] = Field(
-        ...,
-        description="Action type."
-    )
-
-    chart_type: ChartType | None = Field(
+    conversation_id: str | None = Field(
         default=None,
-        description="Visualization type."
+        description=(
+            "Existing conversation ID. "
+            "Leave empty to create a new conversation."
+        ),
     )
 
-    x_column: str | None = Field(
-        default=None,
-        description="Primary column."
+    model_config = ConfigDict(
+        extra="forbid",
     )
 
-    y_column: str | None = Field(
-        default=None,
-        description="Secondary column."
-    )
 
-    model_config = {
-        "extra": "forbid",
-        "frozen": True,
-    }
-
+# =====================================================
+# Chat Response
+# =====================================================
 
 class ChatResponse(BaseModel):
     """
-    AI Copilot response.
+    Response returned to the frontend.
     """
+
+    conversation_id: str = Field(
+        ...,
+        description="Conversation identifier.",
+    )
 
     answer: str = Field(
         ...,
-        description="Natural language response."
+        description="Assistant response.",
     )
 
-    actions: list[CopilotAction] = Field(
-        default_factory=list,
-        description="Actions requested by the AI."
+    execution_time: float = Field(
+        ...,
+        ge=0,
+        description="Execution time in seconds.",
     )
 
-    model_config = {
-        "extra": "forbid",
-        "frozen": True,
-    }
+    model_config = ConfigDict(
+        extra="forbid",
+    )

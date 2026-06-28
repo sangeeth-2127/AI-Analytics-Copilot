@@ -33,19 +33,6 @@ class ParameterResolver:
     ) -> AgentPlan:
         """
         Populate ToolRequest parameters.
-
-        Args:
-            plan:
-                Execution plan.
-
-            dataframe:
-                Uploaded dataset.
-
-            question:
-                User question.
-
-        Returns:
-            Updated AgentPlan.
         """
 
         columns = dataframe.columns.tolist()
@@ -58,39 +45,41 @@ class ParameterResolver:
 
             parameters = dict(request.parameters)
 
-            if request.tool == ToolType.VISUALIZATION:
+            match request.tool:
 
-                parameters.update(
-                    self._resolve_visualization(
-                        question,
-                        columns,
+                case ToolType.VISUALIZATION:
+
+                    parameters.update(
+                        self._resolve_visualization(
+                            question,
+                            columns,
+                        )
                     )
-                )
 
-            elif request.tool == ToolType.ANALYSIS:
+                case ToolType.ANALYSIS:
 
-                parameters.update(
-                    self._resolve_analysis(
-                        question,
-                        columns,
+                    parameters.update(
+                        self._resolve_analysis(
+                            question,
+                            columns,
+                        )
                     )
-                )
 
-            elif request.tool == ToolType.RECOMMENDATION:
+                case ToolType.RECOMMENDATION:
 
-                parameters.update(
-                    self._resolve_recommendation(
-                        question,
-                        columns,
+                    parameters.update(
+                        self._resolve_recommendation(
+                            question,
+                            columns,
+                        )
                     )
-                )
 
             updated_steps.append(
                 step.model_copy(
                     update={
                         "tool_request": request.model_copy(
                             update={
-                                "parameters": parameters
+                                "parameters": parameters,
                             }
                         )
                     }
@@ -102,7 +91,7 @@ class ParameterResolver:
                 "execution_graph":
                 plan.execution_graph.model_copy(
                     update={
-                        "steps": updated_steps
+                        "steps": updated_steps,
                     }
                 )
             }
@@ -118,58 +107,111 @@ class ParameterResolver:
         columns: list[str],
     ) -> dict:
 
-        question_lower = question.lower()
+        question = question.lower()
 
         matched_columns = self._match_columns(
-            question_lower,
+            question,
             columns,
         )
 
-        if "scatter" in question_lower:
+        # Scatter Plot
+        if any(
+            keyword in question
+            for keyword in (
+                "scatter",
+                "relationship",
+                "compare",
+                "correlation",
+            )
+        ):
 
             if len(matched_columns) >= 2:
 
                 return {
+                    "chart_type": "scatter",
                     "x_column": matched_columns[0],
                     "y_column": matched_columns[1],
                 }
 
-        if "histogram" in question_lower:
+        # Histogram
+        if any(
+            keyword in question
+            for keyword in (
+                "histogram",
+                "distribution",
+                "frequency",
+            )
+        ):
 
             if matched_columns:
 
                 return {
-                    "column": matched_columns[0]
+                    "chart_type": "histogram",
+                    "x_column": matched_columns[0],
                 }
 
-        if "box" in question_lower:
+        # Box Plot
+        if any(
+            keyword in question
+            for keyword in (
+                "box",
+                "boxplot",
+            )
+        ):
 
             if matched_columns:
 
                 return {
-                    "column": matched_columns[0]
+                    "chart_type": "boxplot",
+                    "x_column": matched_columns[0],
                 }
 
-        if "line" in question_lower:
+        # Line Chart
+        if any(
+            keyword in question
+            for keyword in (
+                "line",
+                "trend",
+            )
+        ):
 
             if len(matched_columns) >= 2:
 
                 return {
+                    "chart_type": "line",
                     "x_column": matched_columns[0],
                     "y_column": matched_columns[1],
                 }
 
-        if "bar" in question_lower:
+        # Bar Chart
+        if any(
+            keyword in question
+            for keyword in (
+                "bar",
+                "count",
+            )
+        ):
 
             if matched_columns:
 
                 return {
-                    "column": matched_columns[0]
+                    "chart_type": "bar",
+                    "x_column": matched_columns[0],
                 }
 
-        if "heatmap" in question_lower:
+        # Correlation Heatmap
 
-            return {}
+        if any(
+            keyword in question
+            for keyword in (
+                "heatmap",
+                "correlation matrix",
+            )
+        ):
+
+            return {
+                "chart_type": "correlation",
+            }
 
         return {}
 
@@ -183,13 +225,11 @@ class ParameterResolver:
         columns: list[str],
     ) -> dict:
 
-        matched_columns = self._match_columns(
-            question.lower(),
-            columns,
-        )
-
         return {
-            "columns": matched_columns
+            "columns": self._match_columns(
+                question.lower(),
+                columns,
+            )
         }
 
     # =====================================================
@@ -202,15 +242,15 @@ class ParameterResolver:
         columns: list[str],
     ) -> dict:
 
-        matched_columns = self._match_columns(
+        matched = self._match_columns(
             question.lower(),
             columns,
         )
 
-        if matched_columns:
+        if matched:
 
             return {
-                "target_column": matched_columns[-1]
+                "target_column": matched[-1]
             }
 
         return {}
@@ -225,8 +265,8 @@ class ParameterResolver:
         columns: list[str],
     ) -> list[str]:
         """
-        Match dataset columns mentioned
-        in the user question.
+        Match dataset columns
+        mentioned in the user question.
         """
 
         matches = []
@@ -239,7 +279,10 @@ class ParameterResolver:
                 + r"\b"
             )
 
-            if re.search(pattern, question):
+            if re.search(
+                pattern,
+                question,
+            ):
 
                 matches.append(column)
 

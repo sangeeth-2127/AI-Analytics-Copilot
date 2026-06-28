@@ -1,15 +1,21 @@
 """
 Application Settings
 
-Centralized configuration for the AI Analytics Copilot.
+Central configuration for the
+AI Analytics Copilot.
 
 Project: AI Analytics Copilot
 Author: Sangeeth S
 """
 
-from functools import lru_cache
+from __future__ import annotations
 
-from pydantic_settings import BaseSettings, SettingsConfigDict
+from typing import Literal
+
+from pydantic_settings import (
+    BaseSettings,
+    SettingsConfigDict,
+)
 
 
 class Settings(BaseSettings):
@@ -17,39 +23,47 @@ class Settings(BaseSettings):
     Application configuration.
     """
 
-    # ======================================================
+    # =====================================================
     # OpenAI
-    # ======================================================
+    # =====================================================
 
-    OPENAI_API_KEY: str = ""
+    OPENAI_API_KEY: str
 
-    OPENAI_MODEL: str = "gpt-4.1-mini"
+    OPENAI_MODEL: str = "gpt-4.1"
 
-    # ======================================================
-    # Gemini
-    # ======================================================
+    # =====================================================
+    # Logging
+    # =====================================================
 
-    GEMINI_API_KEY: str = ""
+    LOG_LEVEL: Literal[
+        "DEBUG",
+        "INFO",
+        "WARNING",
+        "ERROR",
+        "CRITICAL",
+    ] = "INFO"
 
-    GEMINI_MODEL: str = "gemini-2.5-flash"
+    LOG_DIR: str = "logs"
 
-    # ======================================================
-    # Ollama
-    # ======================================================
+    # =====================================================
+    # FastAPI
+    # =====================================================
 
-    OLLAMA_BASE_URL: str = "http://localhost:11434"
+    APP_NAME: str = "AI Analytics Copilot"
 
-    OLLAMA_MODEL: str = "llama3.1"
+    APP_VERSION: str = "1.0.0"
 
-    # ======================================================
-    # Agent
-    # ======================================================
+    APP_DESCRIPTION: str = (
+        "An AI-powered analytics platform capable of "
+        "dataset analysis, visualization, machine learning "
+        "recommendations, and conversational data exploration."
+    )
 
-    DEFAULT_PROVIDER: str = "gemini"
+    API_PREFIX: str = "/api/v1"
 
-    MAX_TOKENS: int = 1200
-
-    TEMPERATURE: float = 0.2
+    # =====================================================
+    # Environment
+    # =====================================================
 
     model_config = SettingsConfigDict(
         env_file=".env",
@@ -57,12 +71,4 @@ class Settings(BaseSettings):
     )
 
 
-@lru_cache
-def get_settings() -> Settings:
-    """
-    Return cached application settings.
-    """
-    return Settings()
-
-
-settings = get_settings()
+settings = Settings()

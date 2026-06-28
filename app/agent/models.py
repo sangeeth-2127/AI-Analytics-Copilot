@@ -10,11 +10,19 @@ Author: Sangeeth S
 
 from __future__ import annotations
 
-from datetime import datetime
+from datetime import UTC, datetime
 from enum import Enum
 from typing import Any
 
-from pydantic import BaseModel, Field
+import pandas as pd
+
+from pydantic import (
+    BaseModel,
+    ConfigDict,
+    Field,
+)
+
+from app.schemas.analysis import DatasetAnalysis
 
 
 # ==========================================================
@@ -27,9 +35,13 @@ class AgentIntent(str, Enum):
     """
 
     ANALYSIS = "analysis"
+
     VISUALIZATION = "visualization"
+
     RECOMMENDATION = "recommendation"
+
     REPORT = "report"
+
     GENERAL = "general"
 
 
@@ -39,13 +51,17 @@ class AgentIntent(str, Enum):
 
 class ToolType(str, Enum):
     """
-    Supported tools inside the Analytics Agent.
+    Supported AI Agent tools.
     """
 
     DATASET = "dataset"
+
     ANALYSIS = "analysis"
+
     VISUALIZATION = "visualization"
+
     RECOMMENDATION = "recommendation"
+
     REPORT = "report"
 
 
@@ -60,23 +76,23 @@ class ToolRequest(BaseModel):
 
     tool: ToolType = Field(
         ...,
-        description="Tool that should execute the request."
+        description="Tool that should execute the request.",
     )
 
     action: str = Field(
         ...,
-        description="Action the tool should perform."
+        description="Action the tool should perform.",
     )
 
     parameters: dict[str, Any] = Field(
         default_factory=dict,
-        description="Input parameters for the tool."
+        description="Input parameters for the tool.",
     )
 
-    model_config = {
-        "extra": "forbid",
-        "frozen": True,
-    }
+    model_config = ConfigDict(
+        extra="forbid",
+        frozen=True,
+    )
 
 
 # ==========================================================
@@ -85,7 +101,7 @@ class ToolRequest(BaseModel):
 
 class ExecutionStep(BaseModel):
     """
-    Represents a single step in the execution graph.
+    Represents a single execution step.
     """
 
     step_number: int = Field(
@@ -102,13 +118,13 @@ class ExecutionStep(BaseModel):
 
     depends_on: list[int] = Field(
         default_factory=list,
-        description="Previous steps required before execution."
+        description="Previous steps required before execution.",
     )
 
-    model_config = {
-        "extra": "forbid",
-        "frozen": True,
-    }
+    model_config = ConfigDict(
+        extra="forbid",
+        frozen=True,
+    )
 
 
 # ==========================================================
@@ -117,15 +133,15 @@ class ExecutionStep(BaseModel):
 
 class ExecutionGraph(BaseModel):
     """
-    Ordered execution plan.
+    Ordered execution graph.
     """
 
     steps: list[ExecutionStep]
 
-    model_config = {
-        "extra": "forbid",
-        "frozen": True,
-    }
+    model_config = ConfigDict(
+        extra="forbid",
+        frozen=True,
+    )
 
 
 # ==========================================================
@@ -143,11 +159,10 @@ class AgentPlan(BaseModel):
 
     requires_llm: bool = True
 
-    model_config = {
-        "extra": "forbid",
-        "frozen": True,
-    }
-
+    model_config = ConfigDict(
+        extra="forbid",
+        frozen=True,
+    )
 
 # ==========================================================
 # Tool Metadata
@@ -161,21 +176,22 @@ class ToolMetadata(BaseModel):
     execution_time: float = Field(
         ...,
         ge=0,
-        description="Execution time in seconds."
+        description="Execution time in seconds.",
     )
 
     executed_at: datetime = Field(
-        default_factory=datetime.utcnow,
+        default_factory=lambda: datetime.now(UTC),
     )
 
     tool_version: str = Field(
         default="1.0.0",
+        description="Version of the executed tool.",
     )
 
-    model_config = {
-        "extra": "forbid",
-        "frozen": True,
-    }
+    model_config = ConfigDict(
+        extra="forbid",
+        frozen=True,
+    )
 
 
 # ==========================================================
@@ -187,24 +203,42 @@ class ToolResult(BaseModel):
     Standard response returned by every tool.
     """
 
-    tool: ToolType
+    tool: ToolType = Field(
+        ...,
+        description="Tool that produced the result.",
+    )
 
-    success: bool
+    success: bool = Field(
+        ...,
+        description="Whether execution succeeded.",
+    )
 
-    message: str
+    message: str = Field(
+        ...,
+        description="Human-readable execution message.",
+    )
 
-    payload: dict[str, Any] = Field(
-        default_factory=dict,
+    payload: Any = Field(
+        default=None,
+        description="Tool-specific response payload.",
     )
 
     metadata: ToolMetadata
 
-    error: str | None = None
+    warnings: list[str] = Field(
+        default_factory=list,
+        description="Non-fatal warnings generated during execution.",
+    )
 
-    model_config = {
-        "extra": "forbid",
-        "frozen": True,
-    }
+    error: str | None = Field(
+        default=None,
+        description="Error message if execution failed.",
+    )
+
+    model_config = ConfigDict(
+        extra="forbid",
+        frozen=True,
+    )
 
 
 # ==========================================================
@@ -213,7 +247,7 @@ class ToolResult(BaseModel):
 
 class AgentContext(BaseModel):
     """
-    Structured context passed to the prompt composer.
+    Structured context passed to the Prompt Composer.
     """
 
     dataset_info: dict[str, Any] = Field(
@@ -238,12 +272,10 @@ class AgentContext(BaseModel):
 
     user_question: str
 
-    model_config = {
-        "extra": "forbid",
-        "frozen": True,
-    }
-
-
+    model_config = ConfigDict(
+        extra="forbid",
+        frozen=True,
+    )
 # ==========================================================
 # LLM Request
 # ==========================================================
@@ -253,9 +285,15 @@ class LLMRequest(BaseModel):
     Request sent to an LLM provider.
     """
 
-    system_prompt: str
+    system_prompt: str = Field(
+        ...,
+        description="System prompt.",
+    )
 
-    user_prompt: str
+    user_prompt: str = Field(
+        ...,
+        description="User prompt.",
+    )
 
     temperature: float = Field(
         default=0.2,
@@ -268,10 +306,10 @@ class LLMRequest(BaseModel):
         ge=1,
     )
 
-    model_config = {
-        "extra": "forbid",
-        "frozen": True,
-    }
+    model_config = ConfigDict(
+        extra="forbid",
+        frozen=True,
+    )
 
 
 # ==========================================================
@@ -283,39 +321,109 @@ class LLMResponse(BaseModel):
     Response returned by an LLM provider.
     """
 
-    content: str
+    content: str = Field(
+        ...,
+        description="Generated response.",
+    )
 
-    model_name: str
+    model_name: str = Field(
+        ...,
+        description="Model used.",
+    )
 
-    provider: str
+    provider: str = Field(
+        ...,
+        description="Provider name.",
+    )
 
-    tokens_used: int | None = None
+    tokens_used: int | None = Field(
+        default=None,
+        description="Total tokens consumed.",
+    )
 
-    finish_reason: str | None = None
+    finish_reason: str | None = Field(
+        default=None,
+        description="Completion finish reason.",
+    )
 
-    model_config = {
-        "extra": "forbid",
-        "frozen": True,
-    }
+    model_config = ConfigDict(
+        extra="forbid",
+        frozen=True,
+    )
 
 
 # ==========================================================
 # Agent Response
 # ==========================================================
+
 class AgentResponse(BaseModel):
+    """
+    Final response returned by the AI Agent.
+    """
 
-    success: bool
-
-    answer: str
-
-    intent: AgentIntent | None = None
-
-    plan: AgentPlan | None = None
-
-    context: AgentContext | None = None
-
-    tool_results: list[ToolResult] = Field(
-        default_factory=list
+    success: bool = Field(
+        ...,
+        description="Whether execution succeeded.",
     )
 
-    llm_response: LLMResponse | None = None
+    answer: str = Field(
+        ...,
+        description="Final response generated for the user.",
+    )
+
+    intent: AgentIntent | None = Field(
+        default=None,
+    )
+
+    plan: AgentPlan | None = Field(
+        default=None,
+    )
+
+    context: AgentContext | None = Field(
+        default=None,
+    )
+
+    tool_results: list[ToolResult] = Field(
+        default_factory=list,
+    )
+
+    llm_response: LLMResponse | None = Field(
+        default=None,
+    )
+
+    model_config = ConfigDict(
+        extra="forbid",
+        frozen=True,
+    )
+
+
+# ==========================================================
+# Tool Execution Context
+# ==========================================================
+
+class ToolExecutionContext(BaseModel):
+    """
+    Runtime context passed to every tool.
+    """
+
+    dataset_id: str = Field(
+        ...,
+        description="Unique dataset identifier.",
+    )
+
+    dataframe: pd.DataFrame
+
+    analysis: DatasetAnalysis | None = Field(
+        default=None,
+        description="Cached dataset analysis.",
+    )
+
+    question: str = Field(
+        ...,
+        description="Original user question.",
+    )
+
+    model_config = ConfigDict(
+        arbitrary_types_allowed=True,
+        extra="forbid",
+    )    

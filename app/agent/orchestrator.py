@@ -23,35 +23,48 @@ import logging
 
 import pandas as pd
 
+from app.agent.context.manager import (
+    ContextManager,
+)
+
 from app.agent.models import (
     AgentResponse,
+    ToolExecutionContext,
     ToolMetadata,
     ToolResult,
 )
+
 from app.agent.planning.execution_graph import (
     ExecutionGraphManager,
 )
+
 from app.agent.planning.intent_detector import (
     IntentDetector,
 )
+
 from app.agent.planning.parameter_resolver import (
     ParameterResolver,
 )
+
 from app.agent.planning.task_planner import (
     TaskPlanner,
 )
+
 from app.agent.prompts.composer import (
     PromptComposer,
 )
+
 from app.agent.providers.base_provider import (
     BaseProvider,
 )
+
 from app.agent.tools.dispatcher import (
     ToolDispatcher,
 )
 
-from app.schemas.analysis import DatasetAnalysis
-
+from app.schemas.analysis import (
+    DatasetAnalysis,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -60,8 +73,7 @@ class AgentOrchestrator:
     """
     Coordinates the complete AI Agent workflow.
 
-    The orchestrator contains NO business logic.
-
+    The orchestrator contains no business logic.
     It simply coordinates the various
     components of the AI Agent.
     """
@@ -76,31 +88,6 @@ class AgentOrchestrator:
         prompt_composer: PromptComposer,
         provider: BaseProvider,
     ) -> None:
-        """
-        Initialize the AI Agent.
-
-        Args:
-            intent_detector:
-                Detects user intent.
-
-            planner:
-                Creates execution plans.
-
-            parameter_resolver:
-                Resolves tool parameters.
-
-            dispatcher:
-                Executes tools.
-
-            context_manager:
-                Builds execution context.
-
-            prompt_composer:
-                Builds prompts.
-
-            provider:
-                LLM provider.
-        """
 
         self._intent_detector = intent_detector
 
@@ -129,22 +116,6 @@ class AgentOrchestrator:
     ) -> AgentResponse:
         """
         Execute the complete AI Agent pipeline.
-
-        Args:
-            dataset_id:
-                Dataset identifier.
-
-            dataframe:
-                Uploaded dataset.
-
-            analysis:
-                Dataset analysis.
-
-            question:
-                User question.
-
-        Returns:
-            AgentResponse
         """
 
         logger.info(
@@ -156,12 +127,20 @@ class AgentOrchestrator:
             question,
         )
 
+        tool_results: list[ToolResult] = []
+
+        intent = None
+
+        plan = None
+
+        context = None
+
         try:
 
-            # --------------------------------------------
+            # =====================================================
             # Step 1
             # Detect Intent
-            # --------------------------------------------
+            # =====================================================
 
             intent = self._intent_detector.detect(
                 question
@@ -172,10 +151,10 @@ class AgentOrchestrator:
                 intent.value,
             )
 
-            # --------------------------------------------
+            # =====================================================
             # Step 2
-            # Create Plan
-            # --------------------------------------------
+            # Create Execution Plan
+            # =====================================================
 
             plan = self._planner.create_plan(
                 intent=intent,
@@ -183,16 +162,13 @@ class AgentOrchestrator:
             )
 
             logger.info(
-                "Execution steps: %d",
-                len(
-                    plan.execution_graph.steps
-                ),
+                "Execution plan created."
             )
 
-            # --------------------------------------------
+            # =====================================================
             # Step 3
             # Resolve Parameters
-            # --------------------------------------------
+            # =====================================================
 
             plan = self._parameter_resolver.resolve(
                 plan=plan,
@@ -200,22 +176,29 @@ class AgentOrchestrator:
                 question=question,
             )
 
-            # --------------------------------------------
+            logger.info(
+                "Tool parameters resolved."
+            )
+
+            # =====================================================
             # Step 4
             # Create Execution Graph
-            # --------------------------------------------
+            # =====================================================
 
             graph = ExecutionGraphManager(
                 plan
             )
 
-            tool_results: list[
-                ToolResult
-            ] = []
-                        # --------------------------------------------
+            execution_context = ToolExecutionContext(
+                dataset_id=dataset_id,
+                dataframe=dataframe,
+                analysis=analysis,
+            )
+
+            # =====================================================
             # Step 5
-            # Execute Plan
-            # --------------------------------------------
+            # Execute Tools
+            # =====================================================
 
             while graph.has_next():
 
@@ -232,16 +215,18 @@ class AgentOrchestrator:
 
                 try:
 
-                    tool_result = self._dispatcher.execute(
-                        dataset_id=dataset_id,
+                    result = self._dispatcher.execute(
+                        context=execution_context,
                         request=step.tool_request,
                     )
 
-                    tool_results.append(tool_result)
+                    tool_results.append(
+                        result
+                    )
 
                     logger.info(
                         "Tool '%s' executed successfully.",
-                        tool_result.tool.value,
+                        result.tool.value,
                     )
 
                 except Exception as exc:
@@ -251,32 +236,41 @@ class AgentOrchestrator:
                     )
 
                     tool_results.append(
+
                         ToolResult(
-                     tool=step.tool_request.tool,
-                     success=False,
-                        message=str(exc),
-                        payload={},
-                        metadata=ToolMetadata(
-                      execution_time=0.0,
-                        ),
-                        error=str(exc),
-                     )
-                )
+
+                            tool=step.tool_request.tool,
+
+                            success=False,
+
+                            message=str(exc),
+
+                            payload={},
+
+                            metadata=ToolMetadata(
+                                execution_time=0.0,
+                            ),
+
+                            error=str(exc),
+                        )
+
+                    )
 
                 finally:
 
                     graph.mark_completed(
-                        step.step_number
+                        step.step_number,
                     )
 
             logger.info(
-                "Tool execution completed."
+                "Execution graph completed."
             )
 
-            # --------------------------------------------
+            # ---------- CONTINUES IN PART B ----------
+                        # =====================================================
             # Step 6
-            # Build Context
-            # --------------------------------------------
+            # Build Agent Context
+            # =====================================================
 
             context = self._context_manager.build(
                 question=question,
@@ -286,13 +280,13 @@ class AgentOrchestrator:
             )
 
             logger.info(
-                "Context successfully built."
+                "Agent context built successfully."
             )
 
-            # --------------------------------------------
+            # =====================================================
             # Step 7
             # Compose Prompt
-            # --------------------------------------------
+            # =====================================================
 
             llm_request = (
                 self._prompt_composer.compose(
@@ -302,5 +296,72 @@ class AgentOrchestrator:
             )
 
             logger.info(
-                "Prompt successfully composed."
+                "Prompt composed successfully."
+            )
+
+            # =====================================================
+            # Step 8
+            # Generate LLM Response
+            # =====================================================
+
+            llm_response = self._provider.generate(
+                llm_request
+            )
+
+            logger.info(
+                "LLM response generated successfully."
+            )
+
+            # =====================================================
+            # Step 9
+            # Build Final Response
+            # =====================================================
+
+            response = AgentResponse(
+
+                success=True,
+
+                answer=llm_response.content,
+
+                intent=intent,
+
+                plan=plan,
+
+                context=context,
+
+                tool_results=tool_results,
+
+                llm_response=llm_response,
+            )
+
+            logger.info(
+                "AI Agent execution completed successfully."
+            )
+
+            return response
+
+        except Exception as exc:
+
+            logger.exception(
+                "AI Agent execution failed."
+            )
+
+            return AgentResponse(
+
+                success=False,
+
+                answer=(
+                    "An unexpected error occurred "
+                    "while processing your request."
+                ),
+
+                intent=intent,
+
+                plan=plan,
+
+                context=context,
+
+                tool_results=tool_results,
+
+                llm_response=None,
             )

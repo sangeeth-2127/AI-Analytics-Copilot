@@ -1,13 +1,15 @@
 """
 Prompt Composer
 
-Builds structured prompts for the AI Analytics Agent.
+Builds structured prompts for the AI Analytics Copilot.
 
 Project: AI Analytics Copilot
 Author: Sangeeth S
 """
 
 from __future__ import annotations
+
+import json
 
 from app.agent.models import (
     AgentContext,
@@ -26,16 +28,30 @@ from app.agent.prompts import (
 
 class PromptComposer:
     """
-    Composes prompts for the language model.
+    Builds prompts for the language model.
     """
 
     _INTENT_PROMPTS = {
-        AgentIntent.ANALYSIS: ANALYSIS_PROMPT,
-        AgentIntent.VISUALIZATION: VISUALIZATION_PROMPT,
-        AgentIntent.RECOMMENDATION: RECOMMENDATION_PROMPT,
-        AgentIntent.REPORT: REPORT_PROMPT,
-        AgentIntent.GENERAL: "",
+
+        AgentIntent.ANALYSIS:
+            ANALYSIS_PROMPT,
+
+        AgentIntent.VISUALIZATION:
+            VISUALIZATION_PROMPT,
+
+        AgentIntent.RECOMMENDATION:
+            RECOMMENDATION_PROMPT,
+
+        AgentIntent.REPORT:
+            REPORT_PROMPT,
+
+        AgentIntent.GENERAL:
+            "",
     }
+
+    # =====================================================
+    # Public API
+    # =====================================================
 
     def compose(
         self,
@@ -43,128 +59,217 @@ class PromptComposer:
         intent: AgentIntent,
     ) -> LLMRequest:
         """
-        Build an LLM request.
-
-        Args:
-            context:
-                Agent execution context.
-
-            intent:
-                Detected user intent.
-
-        Returns:
-            LLMRequest
+        Build the final LLM request.
         """
 
-        system_prompt = "\n\n".join(
-            [
-                BASE_SYSTEM_PROMPT,
-                self._INTENT_PROMPTS[intent],
-            ]
-        ).strip()
+        system_prompt = self._build_system_prompt(
+            intent
+        )
 
-        user_prompt = self._build_user_prompt(context)
+        user_prompt = self._build_user_prompt(
+            context
+        )
 
         return LLMRequest(
+
             system_prompt=system_prompt,
+
             user_prompt=user_prompt,
+
             temperature=0.2,
+
             max_tokens=1200,
         )
 
-    # ======================================================
-    # Private Helpers
-    # ======================================================
+    # =====================================================
+    # System Prompt
+    # =====================================================
+
+    def _build_system_prompt(
+        self,
+        intent: AgentIntent,
+    ) -> str:
+        """
+        Build the system prompt.
+        """
+
+        intent_prompt = (
+            self._INTENT_PROMPTS.get(
+                intent,
+                "",
+            )
+        )
+
+        return "\n\n".join(
+
+            [
+
+                BASE_SYSTEM_PROMPT,
+
+                intent_prompt,
+
+            ]
+
+        ).strip()
+
+    # =====================================================
+    # User Prompt
+    # =====================================================
 
     def _build_user_prompt(
         self,
         context: AgentContext,
     ) -> str:
         """
-        Build the user prompt from the execution context.
+        Build the user prompt.
         """
 
         return f"""
+==============================
 USER QUESTION
--------------
+==============================
+
 {context.user_question}
 
+==============================
 DATASET INFORMATION
--------------------
-Rows: {context.dataset_info.get("rows")}
-Columns: {context.dataset_info.get("columns")}
-Memory Usage: {context.dataset_info.get("memory_usage_bytes")} bytes
+==============================
+
+Rows:
+{context.dataset_info["rows"]}
+
+Columns:
+{context.dataset_info["columns"]}
+
+Memory Usage:
+{context.dataset_info["memory_usage_bytes"]}
 
 Column Names:
-{context.dataset_info.get("column_names")}
 
+{context.dataset_info["column_names"]}
+
+==============================
 AVAILABLE COLUMNS
------------------
-Numeric:
-{context.available_columns.get("numeric")}
+==============================
 
-Categorical:
-{context.available_columns.get("categorical")}
+Numeric
 
-Boolean:
-{context.available_columns.get("boolean")}
+{context.available_columns["numeric"]}
 
-Datetime:
-{context.available_columns.get("datetime")}
+Categorical
 
+{context.available_columns["categorical"]}
+
+Boolean
+
+{context.available_columns["boolean"]}
+
+Datetime
+
+{context.available_columns["datetime"]}
+
+==============================
 DATASET ANALYSIS
-----------------
-{context.analysis}
+==============================
 
+{json.dumps(
+context.analysis,
+indent=2,
+default=str,
+)}
+
+==============================
 SAMPLE ROWS
------------
-{context.sample_rows}
+==============================
 
+{json.dumps(
+context.sample_rows,
+indent=2,
+default=str,
+)}
+
+==============================
 TOOL RESULTS
-------------
-{self._format_tool_results(context)}
+==============================
 
-Instructions
-------------
-Use ONLY the supplied context.
+{self._tool_results(
+context
+)}
 
-If the answer cannot be determined from the provided
-context, explicitly state that additional information
-is required.
+==============================
+INSTRUCTIONS
+==============================
 
-Never fabricate values or observations.
+1. Use ONLY the supplied dataset.
+
+2. Never fabricate information.
+
+3. Never assume values.
+
+4. If information is unavailable,
+say so explicitly.
+
+5. Explain your reasoning clearly.
+
+6. If charts were generated,
+include observations.
+
+7. If recommendations were
+generated,
+explain why.
+
+8. Respond professionally.
 """.strip()
 
+    # =====================================================
+    # Tool Results
+    # =====================================================
+
     @staticmethod
-    def _format_tool_results(
+    def _tool_results(
         context: AgentContext,
     ) -> str:
         """
-        Convert tool results into a readable format.
+        Format tool results.
         """
 
         if not context.tool_results:
-            return "No tool results available."
 
-        formatted_results: list[str] = []
+            return "No tools executed."
+
+        sections = []
 
         for result in context.tool_results:
 
-            formatted_results.append(
+            sections.append(
+
                 f"""
-Tool: {result.tool.value}
+Tool
 
-Status: {"Success" if result.success else "Failed"}
+{result.tool.value}
 
-Message:
+Status
+
+{"Success" if result.success else "Failed"}
+
+Message
+
 {result.message}
 
-Payload:
-{result.payload}
+Payload
+
+{json.dumps(
+result.payload,
+indent=2,
+default=str,
+)}
 """.strip()
+
             )
 
-        return "\n\n".join(formatted_results)
+        return "\n\n".join(
+            sections
+        )
 
 
 prompt_composer = PromptComposer()

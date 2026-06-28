@@ -11,8 +11,12 @@ Author: Sangeeth S
 from __future__ import annotations
 
 from abc import ABC, abstractmethod
-
-from app.agent.models import ToolRequest, ToolResult
+from app.agent.models import (
+    ToolExecutionContext,
+    ToolRequest,
+    ToolResult,
+    ToolType,
+)
 
 
 class BaseTool(ABC):
@@ -34,52 +38,50 @@ class BaseTool(ABC):
 
     @property
     def name(self) -> str:
-        """
-        Tool name.
-        """
         return self._name
 
     @property
     def description(self) -> str:
-        """
-        Tool description.
-        """
         return self._description
 
     @property
     def version(self) -> str:
-        """
-        Tool version.
-        """
         return self._version
+    
+    @property
+    @abstractmethod
+    def tool_type(self) -> ToolType:
+        """
+        Return the type of this tool.
+        """
+        raise NotImplementedError
 
     def validate(
         self,
         request: ToolRequest,
     ) -> None:
         """
-        Validate the incoming tool request.
+        Validate the incoming request.
 
-        Tools that require custom validation should
-        override this method.
+        Override if custom validation is required.
         """
         return
 
     @abstractmethod
     def execute(
         self,
-        dataset_id: str,
+        context: ToolExecutionContext,
         request: ToolRequest,
     ) -> ToolResult:
         """
         Execute the tool.
 
         Args:
-            dataset_id:
-                Dataset identifier.
+            context:
+                Runtime execution context.
 
             request:
-                Tool execution request.
+                Tool request.
 
         Returns:
             ToolResult
@@ -92,10 +94,8 @@ class BaseTool(ABC):
     ) -> bool:
         """
         Check whether the tool supports an action.
-
-        Override this method if the tool supports
-        only specific actions.
         """
+
         return True
 
     def __repr__(self) -> str:
