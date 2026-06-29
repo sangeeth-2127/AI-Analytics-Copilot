@@ -45,9 +45,8 @@ async def chat(
     """
     Chat with the AI Analytics Copilot.
 
-    A new conversation will automatically be created
-    if no conversation_id is supplied or if the supplied
-    conversation does not exist.
+    If no conversation_id is supplied,
+    a new conversation is automatically created.
     """
 
     logger.info(
@@ -69,7 +68,7 @@ async def chat(
     except KeyError as exc:
 
         logger.exception(
-            "Resource not found."
+            "KeyError occurred."
         )
 
         raise HTTPException(
@@ -80,7 +79,7 @@ async def chat(
     except ValueError as exc:
 
         logger.exception(
-            "Invalid request."
+            "ValueError occurred."
         )
 
         raise HTTPException(
@@ -90,14 +89,15 @@ async def chat(
 
     except Exception:
 
+        # =================================================
+        # DEBUG MODE
+        # =================================================
+        # Let the full traceback appear in the terminal.
+        # Do NOT convert it into an HTTPException.
+        # =================================================
+
         logger.exception(
-            "Unexpected server error."
+            "Unexpected exception occurred."
         )
 
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=(
-                "An unexpected error occurred while "
-                "processing your request."
-            ),
-        )
+        raise

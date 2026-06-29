@@ -34,7 +34,6 @@ class ChatService:
         """
         Initialize the chat service.
         """
-
         self._agent = get_agent()
 
     # =====================================================
@@ -47,18 +46,9 @@ class ChatService:
     ) -> ChatResponse:
         """
         Process a user chat request.
-
-        Args:
-            request:
-                Incoming chat request.
-
-        Returns:
-            ChatResponse
         """
 
-        logger.info(
-            "Processing chat request."
-        )
+        logger.info("Processing chat request.")
 
         start_time = time.perf_counter()
 
@@ -76,7 +66,7 @@ class ChatService:
             )
 
             logger.info(
-                "Created new conversation: %s",
+                "Created conversation: %s",
                 conversation.conversation_id,
             )
 
@@ -98,7 +88,7 @@ class ChatService:
             except KeyError:
 
                 logger.warning(
-                    "Conversation '%s' not found. Creating a new one.",
+                    "Conversation '%s' not found. Creating a new conversation.",
                     request.conversation_id,
                 )
 
@@ -107,7 +97,7 @@ class ChatService:
                 )
 
                 logger.info(
-                    "Created new conversation: %s",
+                    "Created conversation: %s",
                     conversation.conversation_id,
                 )
 
@@ -124,7 +114,7 @@ class ChatService:
         )
 
         # =====================================================
-        # Store User Message
+        # Save User Message
         # =====================================================
 
         memory_service.add_user_message(
@@ -144,7 +134,7 @@ class ChatService:
         )
 
         # =====================================================
-        # Store Assistant Message
+        # Save Assistant Message
         # =====================================================
 
         memory_service.add_assistant_message(

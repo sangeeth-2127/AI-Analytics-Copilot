@@ -8,6 +8,7 @@ Author: Sangeeth S
 from __future__ import annotations
 
 import logging
+import traceback
 
 from fastapi import FastAPI
 from fastapi import Request
@@ -29,50 +30,45 @@ def register_exception_handlers(
     Register all application exception handlers.
     """
 
-    @app.exception_handler(
-        DatasetNotFoundError
-    )
+    @app.exception_handler(DatasetNotFoundError)
     async def dataset_not_found(
         request: Request,
         exc: DatasetNotFoundError,
     ):
-
         return JSONResponse(
             status_code=404,
             content={
-                "detail": str(exc),
+                "error": type(exc).__name__,
+                "message": str(exc),
             },
         )
 
-    @app.exception_handler(
-        DatasetValidationError
-    )
+    @app.exception_handler(DatasetValidationError)
     async def dataset_validation(
         request: Request,
         exc: DatasetValidationError,
     ):
-
         return JSONResponse(
             status_code=400,
             content={
-                "detail": str(exc),
+                "error": type(exc).__name__,
+                "message": str(exc),
             },
         )
 
-    @app.exception_handler(
-        AnalyticsCopilotError
-    )
+    @app.exception_handler(AnalyticsCopilotError)
     async def application_exception(
         request: Request,
         exc: AnalyticsCopilotError,
     ):
-
         logger.exception(exc)
+        traceback.print_exc()
 
         return JSONResponse(
             status_code=500,
             content={
-                "detail": str(exc),
+                "error": type(exc).__name__,
+                "message": str(exc),
             },
         )
 
@@ -81,12 +77,13 @@ def register_exception_handlers(
         request: Request,
         exc: Exception,
     ):
-
         logger.exception(exc)
+        traceback.print_exc()
 
         return JSONResponse(
             status_code=500,
             content={
-                "detail": "Internal Server Error",
+                "error": type(exc).__name__,
+                "message": str(exc),
             },
         )

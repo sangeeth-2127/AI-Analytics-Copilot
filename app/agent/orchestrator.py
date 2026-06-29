@@ -136,7 +136,7 @@ class AgentOrchestrator:
         context = None
 
         try:
-
+            print("STEP 1 - Intent Detection")
             # =====================================================
             # Step 1
             # Detect Intent
@@ -150,7 +150,7 @@ class AgentOrchestrator:
                 "Detected intent: %s",
                 intent.value,
             )
-
+            print("STEP 2 - Create Execution Plan")
             # =====================================================
             # Step 2
             # Create Execution Plan
@@ -164,7 +164,7 @@ class AgentOrchestrator:
             logger.info(
                 "Execution plan created."
             )
-
+            print("STEP 3 - Resolve Parameters")
             # =====================================================
             # Step 3
             # Resolve Parameters
@@ -179,7 +179,7 @@ class AgentOrchestrator:
             logger.info(
                 "Tool parameters resolved."
             )
-
+            print("STEP 4 - Create Execution Graph")
             # =====================================================
             # Step 4
             # Create Execution Graph
@@ -193,8 +193,9 @@ class AgentOrchestrator:
                 dataset_id=dataset_id,
                 dataframe=dataframe,
                 analysis=analysis,
+                question=question,
             )
-
+            print("STEP 5 - Execute Tools")
             # =====================================================
             # Step 5
             # Execute Tools
@@ -231,30 +232,9 @@ class AgentOrchestrator:
 
                 except Exception as exc:
 
-                    logger.exception(
-                        "Tool execution failed."
-                    )
+                    logger.exception(exc)
 
-                    tool_results.append(
-
-                        ToolResult(
-
-                            tool=step.tool_request.tool,
-
-                            success=False,
-
-                            message=str(exc),
-
-                            payload={},
-
-                            metadata=ToolMetadata(
-                                execution_time=0.0,
-                            ),
-
-                            error=str(exc),
-                        )
-
-                    )
+                    raise
 
                 finally:
 
@@ -265,7 +245,7 @@ class AgentOrchestrator:
             logger.info(
                 "Execution graph completed."
             )
-
+            print("STEP 6 - Build Agent Context")
             # ---------- CONTINUES IN PART B ----------
                         # =====================================================
             # Step 6
@@ -282,7 +262,7 @@ class AgentOrchestrator:
             logger.info(
                 "Agent context built successfully."
             )
-
+            print("STEP 7 - Compose Prompt")
             # =====================================================
             # Step 7
             # Compose Prompt
@@ -298,7 +278,7 @@ class AgentOrchestrator:
             logger.info(
                 "Prompt composed successfully."
             )
-
+            print("STEP 8 - Generate LLM Response")
             # =====================================================
             # Step 8
             # Generate LLM Response
@@ -312,6 +292,7 @@ class AgentOrchestrator:
                 "LLM response generated successfully."
             )
 
+            print("STEP 9 - Build Final Response")
             # =====================================================
             # Step 9
             # Build Final Response
@@ -340,28 +321,10 @@ class AgentOrchestrator:
 
             return response
 
-        except Exception as exc:
+        except Exception:
 
             logger.exception(
-                "AI Agent execution failed."
+        "AI Agent execution failed."
             )
 
-            return AgentResponse(
-
-                success=False,
-
-                answer=(
-                    "An unexpected error occurred "
-                    "while processing your request."
-                ),
-
-                intent=intent,
-
-                plan=plan,
-
-                context=context,
-
-                tool_results=tool_results,
-
-                llm_response=None,
-            )
+            raise

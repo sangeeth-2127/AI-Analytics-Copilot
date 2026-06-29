@@ -24,12 +24,12 @@ class Settings(BaseSettings):
     """
 
     # =====================================================
-    # OpenAI
+    # Ollama
     # =====================================================
 
-    OPENAI_API_KEY: str
+    OLLAMA_MODEL: str = "qwen2.5:7b"
 
-    OPENAI_MODEL: str = "gpt-4.1"
+    OLLAMA_BASE_URL: str = "http://127.0.0.1:11434"
 
     # =====================================================
     # Logging

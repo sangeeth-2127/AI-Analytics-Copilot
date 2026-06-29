@@ -9,8 +9,13 @@ Author: Sangeeth S
 
 from __future__ import annotations
 
-from app.agent.providers.base_provider import BaseProvider
-from app.agent.providers.openai_provider import OpenAIProvider
+from app.agent.providers.base_provider import (
+    BaseProvider,
+)
+
+from app.agent.providers.ollama_provider import (
+    OllamaProvider,
+)
 
 
 class ProviderRegistry:
@@ -28,7 +33,7 @@ class ProviderRegistry:
         """
 
         if self._provider is None:
-            self._provider = OpenAIProvider()
+            self._provider = OllamaProvider()
 
         return self._provider
 
