@@ -129,7 +129,7 @@ AI-Analytics-Copilot/
 ### 1️⃣ Clone the Repository
 
 ```bash
-git clone https://github.com/yourusername/AI-Analytics-Copilot.git
+git clone https://github.com/sangeeth-2127/AI-Analytics-Copilot.git
 cd AI-Analytics-Copilot
 ```
 
@@ -293,10 +293,6 @@ This project is licensed under the **MIT License**.
 
 AI • Machine Learning • Data Analytics
 
-- 💼 LinkedIn: https://linkedin.com/in/your-profile
-- 🌐 GitHub: https://github.com/yourusername
-
----
 
 <div align="center">
 
